@@ -1,0 +1,21 @@
+{
+  "name": "musqrat",
+  "version": "0.1.0",
+  "description": "A wrapper around the mysql package",
+  "main": "index.ts",
+  "scripts": {
+    "build": "tsc",
+    "test": "jest"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "typescript": "^4.3.3"
+  },
+  "devDependencies": {
+    "@types/jest": "^26.0.23",
+    "jest": "^27.0.4",
+    "ts-jest": "^27.0.3",
+    "ts-node": "^10.0.0"
+  }
+}
