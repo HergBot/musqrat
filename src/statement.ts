@@ -1,21 +1,23 @@
+/*
+TODO:
+    - Execute query
+        - Safe guard params?
+        - Scrub query?
+        - End query with ;?
+    - Options to calls
+    - Advanced uses
+        - Unions
+        - Sub queries
+        - Function calls/stored procs?
+*/
+
 import Table from "./table";
+import { AnyKeyInArray, OptionalMulti, prepOptionalMulti } from "./utilities";
 
-export type Nullable<T> = T | null;
+export type Order = 'ASC' | 'DESC';
 
-// Can we limit these based on the field type? i.e. boolean only has = and !=
-// IN has to be an array
-// IS has to be null/not null
-type WhereOp = '=' | '!=' | '>' | '>=' | '<' | '<=' | 'IN' | 'IS' | 'IS NOT';
-type WhereChain = 'OR' | 'AND';
-
-// WHERE Field OP Value
-// WHERE Field OP Value OR Field2 OP Value2
-// WHERE Field OP Value AND Field2 OP Value2
-// WHERE Field OP Value AND Field2 OP Value2 OR Field3 OP Value2
-// WHERE (Field OP Value AND Field2 OP Value2) OR Field3 OP Value2
-
-// .where('Field', '=', 1)
-// .where({'})
+export type WhereOp = '=' | '!=' | '>' | '>=' | '<' | '<=' | 'IN' | 'IS' | 'IS NOT';
+export type WhereChain = 'OR' | 'AND';
 
 export type WhereClause<Schema> = {
     [K in keyof Schema]: {
@@ -39,7 +41,19 @@ export type WhereAggregation<Schema> = {
     [Chain in WhereChain]?: [AggregationCondition<Schema>, AggregationCondition<Schema>, ...AggregationCondition<Schema>[]]
 }
 
-class Statement<SchemaType> {
+// Can we add another type that is a Tuple or whatever to have an option for less verbose syntax? i.e. ['tableId', 5]
+export type SetClause<Schema> = {
+    [K in keyof Schema]: {
+        field: K;
+        value: Schema[K]
+    }
+}[keyof Schema];
+
+interface IExecutableStatement {
+    exec: () => Promise<void>
+}
+
+class BaseStatement<SchemaType> {
     private _query: string;
 
     constructor() {
@@ -49,42 +63,12 @@ class Statement<SchemaType> {
     get query(): string {
         return this._query;
     }
-    
-    public where(field: keyof SchemaType, operator: Extract<WhereOp, 'IN'>, value: SchemaType[keyof SchemaType][]): Statement<SchemaType>
-    public where(field: keyof SchemaType, operator: Extract<WhereOp, 'IS' | 'IS NOT'>, value: null): Statement<SchemaType>
-    public where(field: keyof SchemaType, operator: Exclude<WhereOp, 'IN' | 'IS' | 'IS NOT'>, value: SchemaType[keyof SchemaType]): Statement<SchemaType> 
-    public where(aggregation: WhereAggregation<SchemaType>): Statement<SchemaType>
-    public where(agg: keyof SchemaType | WhereAggregation<SchemaType>, operator?: WhereOp, value?: SchemaType[keyof SchemaType] | SchemaType[keyof SchemaType][] | null) {
-        if (operator && value) {
-            this.append(`WHERE ${this.constructClause({field: agg as keyof SchemaType, operator, value} as WhereClause<SchemaType>)}`);
-            return this;
-        }
-
-        this.append(`WHERE ${this.constructAggregation(agg as WhereAggregation<SchemaType>)}`);
-        return this;
-    }
 
     protected append(queryText: string): void {
         this._query = this._query === '' ? queryText : `${this._query} ${queryText}`;
     }
 
-    private constructAggregation(aggregation: WhereAggregation<SchemaType>): string {
-        const agg = Object.keys(aggregation).map(chain => {
-            return aggregation[chain as WhereChain]?.map(condition => {
-                if ((condition as WhereClause<SchemaType>).field !== undefined) {
-                    return this.constructClause((condition as WhereClause<SchemaType>));
-                }
-                return this.constructAggregation(condition as WhereAggregation<SchemaType>);
-            }).join(` ${chain} `);
-        }).join(' ');
-        return `(${agg})`;
-    }
-
-    private constructClause(clause: WhereClause<SchemaType>): string {
-        return `${clause.field} ${clause.operator} ${this.formatValue(clause.value)}`;
-    }
-
-    private formatValue<K extends keyof SchemaType>(value: SchemaType[K] | SchemaType[K][] | null): string {
+    protected formatValue<K extends keyof SchemaType>(value: SchemaType[K] | SchemaType[K][] | null): string {
         if (value === null || value === undefined) {
             return 'NULL';
         } else if (Array.isArray(value)) {
@@ -103,45 +87,67 @@ class Statement<SchemaType> {
     }
 }
 
-interface IExecutableStatement {
-    exec: () => Promise<void>
-}
-
-interface IPrecisionStatement<SchemaType> {
-    where: () => IExecutableStatement;
-}
-
-/*interface SelectStatement<SchemaType> extends ExecutableStatement, PrecisionStatement<SchemaType>, Statement {
-    innerJoin: () => SelectStatement<SchemaType>;
-    orderBy: () => SelectStatement<SchemaType>;
-    groupBy: () => SelectStatement<SchemaType>;
-    limit: () => SelectStatement<SchemaType>;
-}*/
-
-/*class Statement {
-    private _sql: string;
-
-    constructor(baseStatement: string) { 
-        this._sql = baseStatement;
+class QueryStatement<SchemaType> extends BaseStatement<SchemaType> {
+    constructor() {
+        super()
     }
 
-    get raw() {
-        return this._sql;
+    public limit(amount: number): QueryStatement<SchemaType> {
+        this.append(`LIMIT ${amount}`);
+        return this;
     }
-};*/
 
-class SelectStatement<SchemaType> extends Statement<SchemaType> implements IExecutableStatement {
-    constructor(tableName: string, fields: (keyof SchemaType)[] = []) {
+    public orderBy(column: keyof SchemaType, order: Order = 'ASC'): QueryStatement<SchemaType> {
+        this.append(`ORDER BY ${column} ${order}`);
+        return this;
+    }
+    
+    public where(field: keyof SchemaType, operator: Extract<WhereOp, 'IN'>, value: SchemaType[keyof SchemaType][]): QueryStatement<SchemaType>
+    public where(field: keyof SchemaType, operator: Extract<WhereOp, 'IS' | 'IS NOT'>, value: null): QueryStatement<SchemaType>
+    public where(field: keyof SchemaType, operator: Exclude<WhereOp, 'IN' | 'IS' | 'IS NOT'>, value: SchemaType[keyof SchemaType]): QueryStatement<SchemaType> 
+    public where(aggregation: WhereAggregation<SchemaType>): QueryStatement<SchemaType>
+    public where(agg: keyof SchemaType | WhereAggregation<SchemaType>, operator?: WhereOp, value?: SchemaType[keyof SchemaType] | SchemaType[keyof SchemaType][] | null) {
+        if (operator && value) {
+            this.append(`WHERE ${this.constructClause({field: agg as keyof SchemaType, operator, value} as WhereClause<SchemaType>)}`);
+            return this;
+        }
+
+        this.append(`WHERE ${this.constructAggregation(agg as WhereAggregation<SchemaType>)}`);
+        return this;
+    }
+
+    private constructAggregation(aggregation: WhereAggregation<SchemaType>): string {
+        const agg = Object.keys(aggregation).map(chain => {
+            return aggregation[chain as WhereChain]?.map(condition => {
+                if ((condition as WhereClause<SchemaType>).field !== undefined) {
+                    return this.constructClause((condition as WhereClause<SchemaType>));
+                }
+                return this.constructAggregation(condition as WhereAggregation<SchemaType>);
+            }).join(` ${chain} `);
+        }).join(' ');
+        return `(${agg})`;
+    }
+
+    private constructClause(clause: WhereClause<SchemaType>): string {
+        return `${clause.field} ${clause.operator} ${this.formatValue(clause.value)}`;
+    }
+}
+
+class SelectStatement<SchemaType, JoinSchemas extends any[] = never[]> extends QueryStatement<SchemaType> implements IExecutableStatement {
+    constructor(tableName: string, fields: (keyof SchemaType | AnyKeyInArray<JoinSchemas>[number])[] = []) {
         super();
         const fieldString = fields.length === 0 ? '*' : fields.join(', ');
         this.append(`SELECT ${fieldString} FROM ${tableName}`);
     }
 
-    innerJoin(): SelectStatement<SchemaType> {
+    // Can we add an overload here that accepts just 1 parameter that is a key on both types and uses the USING syntax?
+    innerJoin<JoinSchema extends JoinSchemas[number]>(foreignTable: Table<JoinSchema>, foreignColumn: keyof JoinSchema, localColumn: keyof SchemaType): SelectStatement<SchemaType, JoinSchemas> {
+        this.append(`INNER JOIN ${foreignTable.name} ON ${foreignColumn} = ${localColumn}`);
         return this;
     }
 
-    orderBy(): SelectStatement<SchemaType> {
+    groupBy(column: keyof SchemaType): SelectStatement<SchemaType, JoinSchemas> {
+        this.append(`GROUP BY ${column}`);
         return this;
     }
 
@@ -150,14 +156,15 @@ class SelectStatement<SchemaType> extends Statement<SchemaType> implements IExec
     }
 };
 
-class UpdateStatement<SchemaType> extends Statement<SchemaType> implements IPrecisionStatement<SchemaType>, IExecutableStatement {
-    constructor(tableName: string) {
+class UpdateStatement<SchemaType> extends QueryStatement<SchemaType> implements IExecutableStatement {
+    constructor(tableName: string, updates: OptionalMulti<SetClause<SchemaType>>) {
         super();
+        updates = prepOptionalMulti(updates);
         this.append(`UPDATE ${tableName}`);
-    }
-
-    where(): UpdateStatement<SchemaType> {
-        return this;
+        const setString = updates.map(update => {
+            return `${update.field} = ${this.formatValue(update.value)}`;
+        }).join(', ');
+        this.append(`SET ${setString}`);
     }
 
     exec(): Promise<void> {
@@ -165,15 +172,27 @@ class UpdateStatement<SchemaType> extends Statement<SchemaType> implements IPrec
     }
 };
 
-class DeleteStatement<SchemaType> extends Statement<SchemaType> implements IExecutableStatement, IPrecisionStatement<SchemaType> {
-
+class DeleteStatement<SchemaType> extends QueryStatement<SchemaType> implements IExecutableStatement {
     constructor(tableName: string) {
         super();
         this.append(`DELETE FROM ${tableName}`);
     }
 
-    where(): DeleteStatement<SchemaType> {
-        return this;
+    exec(): Promise<void> {
+        return Promise.resolve();
+    }
+};
+
+class InsertStatement<SchemaType, PrimaryKey extends keyof SchemaType = never> extends BaseStatement<SchemaType> implements IExecutableStatement {
+    // We need to sort the keys and get everything in the same order. Object.values returns in the order of assignment
+    constructor(tableName: string, values: OptionalMulti<Omit<SchemaType, PrimaryKey>>) {
+        super();
+        values = prepOptionalMulti(values);
+        const columns = Object.keys(values[0]);
+        const valueStrings = values.map(value => {
+            return `(${Object.values(value).map(value => this.formatValue(value as SchemaType[keyof SchemaType])).join(', ')})`;
+        })
+        this.append(`INSERT INTO ${tableName} (${columns.join(', ')}) VALUES ${valueStrings.join(', ')}`);
     }
 
     exec(): Promise<void> {
@@ -182,8 +201,9 @@ class DeleteStatement<SchemaType> extends Statement<SchemaType> implements IExec
 };
 
 export {
-    Statement,
+    QueryStatement,
     SelectStatement,
     UpdateStatement,
-    DeleteStatement
+    DeleteStatement,
+    InsertStatement
 }

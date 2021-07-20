@@ -7,6 +7,10 @@ class Table<SchemaType> {
         this._name = name;
     }
 
+    get name(): string {
+        return this._name;
+    }
+
     select(...fields: (keyof SchemaType)[]): SelectStatement<SchemaType> {
         return new SelectStatement(this._name, fields);
     }
