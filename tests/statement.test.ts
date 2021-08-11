@@ -47,7 +47,8 @@ describe('class QueryStatement', () => {
     describe('method where', () => {
         test('with just one operation', () => {
             statement.where('active', '=', true);
-            expect(statement.query).toEqual('WHERE active = TRUE');
+            expect(statement.query).toEqual('WHERE active = ?');
+            expect(statement.variables).toEqual([true]);
         });
 
         test('with an AND operation', () => {
@@ -65,7 +66,8 @@ describe('class QueryStatement', () => {
                     }
                 ]
             });
-            expect(statement.query).toEqual('WHERE (tableId = 1 AND description != \'done\')');
+            expect(statement.query).toEqual('WHERE (tableId = ? AND description != ?)');
+            expect(statement.variables).toEqual([1, 'done']);
         });
 
         test('with an OR operation', () => {
@@ -83,7 +85,8 @@ describe('class QueryStatement', () => {
                     }
                 ]
             });
-            expect(statement.query).toEqual('WHERE (tableId > 5 OR description IS NULL)');
+            expect(statement.query).toEqual('WHERE (tableId > ? OR description IS ?)');
+            expect(statement.variables).toEqual([5, null]);
         });
 
         test('with a nested aggregation', () => {
@@ -110,7 +113,8 @@ describe('class QueryStatement', () => {
                     }
                 ]
             });
-            expect(statement.query).toEqual('WHERE ((tableId IN (1) OR description IS NOT NULL) AND active != FALSE)');
+            expect(statement.query).toEqual('WHERE ((tableId IN ? OR description IS NOT ?) AND active != ?)');
+            expect(statement.variables).toEqual([[1], null, false]);
         });
     });
 });
@@ -173,7 +177,8 @@ describe('class UpdateStatement', () => {
             });
     
             it('should format the update', () => {
-                expect(statement.query).toEqual(`${BASE_STATMENT} SET active = FALSE`);
+                expect(statement.query).toEqual(`${BASE_STATMENT} SET active = ?`);
+                expect(statement.variables).toEqual([false]);
             });
         });
     
@@ -186,7 +191,8 @@ describe('class UpdateStatement', () => {
             });
     
             it('should format the update', () => {
-                expect(statement.query).toEqual(`${BASE_STATMENT} SET description = NULL, active = FALSE`);
+                expect(statement.query).toEqual(`${BASE_STATMENT} SET description = ?, active = ?`);
+                expect(statement.variables).toEqual([null, false]);
             });
         });
     });
@@ -217,7 +223,8 @@ describe('class InsertStatement', () => {
             });
     
             it('should format the update', () => {
-                expect(statement.query).toEqual(`${BASE_STATMENT} (active, description) VALUES (FALSE, 'something')`);
+                expect(statement.query).toEqual(`${BASE_STATMENT} (active, description) VALUES (?, ?)`);
+                expect(statement.variables).toEqual([false, 'something']);
             });
         });
     
@@ -230,7 +237,8 @@ describe('class InsertStatement', () => {
             });
     
             it('should format the update', () => {
-                expect(statement.query).toEqual(`${BASE_STATMENT} (tableId, active, description) VALUES (1, FALSE, 'something'), (2, TRUE, NULL)`);
+                expect(statement.query).toEqual(`${BASE_STATMENT} (tableId, active, description) VALUES (?, ?, ?), (?, ?, ?)`);
+                expect(statement.variables).toEqual([1, false, 'something', 2, true, null]);
             });
         });
     });

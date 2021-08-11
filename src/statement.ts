@@ -11,6 +11,10 @@ TODO:
         - Function calls/stored procs?
 */
 
+import mysql from 'mysql2/promise';
+import { promisify } from 'util';
+import { IDbConnection } from './connection';
+
 import Table from "./table";
 import { AnyKeyInArray, OptionalMulti, prepOptionalMulti } from "./utilities";
 
@@ -41,6 +45,8 @@ export type WhereAggregation<Schema> = {
     [Chain in WhereChain]?: [AggregationCondition<Schema>, AggregationCondition<Schema>, ...AggregationCondition<Schema>[]]
 }
 
+export type QueryVariable<T> = T[keyof T] | T[keyof T][] | null;
+
 // Can we add another type that is a Tuple or whatever to have an option for less verbose syntax? i.e. ['tableId', 5]
 export type SetClause<Schema> = {
     [K in keyof Schema]: {
@@ -55,17 +61,26 @@ interface IExecutableStatement {
 
 class BaseStatement<SchemaType> {
     private _query: string;
+    private _variables: Array<QueryVariable<SchemaType>>;
+    private _dbConnection: IDbConnection | undefined;
 
-    constructor() {
+    constructor(pool?: IDbConnection) {
         this._query = '';
+        this._variables = [];
+        this._dbConnection = pool;
     }
 
     get query(): string {
         return this._query;
     }
 
-    protected append(queryText: string): void {
+    get variables(): Array<QueryVariable<SchemaType>> {
+        return this._variables;
+    }
+
+    protected append(queryText: string, variables: Array<QueryVariable<SchemaType>> = []): void {
         this._query = this._query === '' ? queryText : `${this._query} ${queryText}`;
+        this._variables = [...this._variables, ...variables];
     }
 
     protected formatValue<K extends keyof SchemaType>(value: SchemaType[K] | SchemaType[K][] | null): string {
@@ -85,11 +100,22 @@ class BaseStatement<SchemaType> {
                 return `${value}`;
         }
     }
+    
+    public async exec(): Promise<SchemaType[]> {
+        if (this._dbConnection === undefined) {
+            throw new Error('Database not connected');
+        }
+
+        const [rows, fields] = await this._dbConnection.execute(this._query, this._variables);
+        console.log(rows);
+        console.log(fields);
+        return rows as SchemaType[];
+    }
 }
 
 class QueryStatement<SchemaType> extends BaseStatement<SchemaType> {
-    constructor() {
-        super()
+    constructor(connection?: IDbConnection) {
+        super(connection)
     }
 
     public limit(amount: number): QueryStatement<SchemaType> {
@@ -107,35 +133,45 @@ class QueryStatement<SchemaType> extends BaseStatement<SchemaType> {
     public where(field: keyof SchemaType, operator: Exclude<WhereOp, 'IN' | 'IS' | 'IS NOT'>, value: SchemaType[keyof SchemaType]): QueryStatement<SchemaType> 
     public where(aggregation: WhereAggregation<SchemaType>): QueryStatement<SchemaType>
     public where(agg: keyof SchemaType | WhereAggregation<SchemaType>, operator?: WhereOp, value?: SchemaType[keyof SchemaType] | SchemaType[keyof SchemaType][] | null) {
-        if (operator && value) {
+        const [query, variables] = operator && value
+            ? this.constructClause({field: agg as keyof SchemaType, operator, value} as WhereClause<SchemaType>)
+            : this.constructAggregation(agg as WhereAggregation<SchemaType>);
+        this.append(`WHERE ${query}`, variables);
+        return this;
+        /*if (operator && value) {
             this.append(`WHERE ${this.constructClause({field: agg as keyof SchemaType, operator, value} as WhereClause<SchemaType>)}`);
             return this;
         }
 
         this.append(`WHERE ${this.constructAggregation(agg as WhereAggregation<SchemaType>)}`);
-        return this;
+        return this;*/
     }
 
-    private constructAggregation(aggregation: WhereAggregation<SchemaType>): string {
+    private constructAggregation(aggregation: WhereAggregation<SchemaType>): [string, Array<QueryVariable<SchemaType>>] {
+        const variables: Array<QueryVariable<SchemaType>> = [];
         const agg = Object.keys(aggregation).map(chain => {
             return aggregation[chain as WhereChain]?.map(condition => {
                 if ((condition as WhereClause<SchemaType>).field !== undefined) {
-                    return this.constructClause((condition as WhereClause<SchemaType>));
+                    const [query, vars] = this.constructClause((condition as WhereClause<SchemaType>));
+                    variables.push(...vars);
+                    return query;
                 }
-                return this.constructAggregation(condition as WhereAggregation<SchemaType>);
+                const [query, vars] = this.constructAggregation(condition as WhereAggregation<SchemaType>);
+                variables.push(...vars);
+                return query;
             }).join(` ${chain} `);
         }).join(' ');
-        return `(${agg})`;
+        return [`(${agg})`, variables];
     }
 
-    private constructClause(clause: WhereClause<SchemaType>): string {
-        return `${clause.field} ${clause.operator} ${this.formatValue(clause.value)}`;
+    private constructClause(clause: WhereClause<SchemaType>): [string, Array<QueryVariable<SchemaType>>] {
+        return [`${clause.field} ${clause.operator} ?`, [clause.value]];
     }
 }
 
-class SelectStatement<SchemaType, JoinSchemas extends any[] = never[]> extends QueryStatement<SchemaType> implements IExecutableStatement {
-    constructor(tableName: string, fields: (keyof SchemaType | AnyKeyInArray<JoinSchemas>[number])[] = []) {
-        super();
+class SelectStatement<SchemaType, JoinSchemas extends any[] = never[]> extends QueryStatement<SchemaType> {
+    constructor(tableName: string, fields: (keyof SchemaType | AnyKeyInArray<JoinSchemas>[number])[] = [], connection?: IDbConnection) {
+        super(connection);
         const fieldString = fields.length === 0 ? '*' : fields.join(', ');
         this.append(`SELECT ${fieldString} FROM ${tableName}`);
     }
@@ -150,53 +186,44 @@ class SelectStatement<SchemaType, JoinSchemas extends any[] = never[]> extends Q
         this.append(`GROUP BY ${column}`);
         return this;
     }
-
-    exec(): Promise<void> {
-        return Promise.resolve();
-    }
 };
 
-class UpdateStatement<SchemaType> extends QueryStatement<SchemaType> implements IExecutableStatement {
-    constructor(tableName: string, updates: OptionalMulti<SetClause<SchemaType>>) {
-        super();
+class UpdateStatement<SchemaType> extends QueryStatement<SchemaType> {
+    constructor(tableName: string, updates: OptionalMulti<SetClause<SchemaType>>, connection?: IDbConnection) {
+        super(connection);
         updates = prepOptionalMulti(updates);
         this.append(`UPDATE ${tableName}`);
+        const variables: Array<QueryVariable<SchemaType>> = [];
         const setString = updates.map(update => {
-            return `${update.field} = ${this.formatValue(update.value)}`;
+            variables.push(update.value);
+            return `${update.field} = ?`;
         }).join(', ');
-        this.append(`SET ${setString}`);
-    }
-
-    exec(): Promise<void> {
-        return Promise.resolve();
+        this.append(`SET ${setString}`, variables);
     }
 };
 
-class DeleteStatement<SchemaType> extends QueryStatement<SchemaType> implements IExecutableStatement {
-    constructor(tableName: string) {
-        super();
+class DeleteStatement<SchemaType> extends QueryStatement<SchemaType> {
+    constructor(tableName: string, connection?: IDbConnection) {
+        super(connection);
         this.append(`DELETE FROM ${tableName}`);
     }
-
-    exec(): Promise<void> {
-        return Promise.resolve();
-    }
 };
 
-class InsertStatement<SchemaType, PrimaryKey extends keyof SchemaType = never> extends BaseStatement<SchemaType> implements IExecutableStatement {
+class InsertStatement<SchemaType, PrimaryKey extends keyof SchemaType = never> extends BaseStatement<SchemaType> {
     // We need to sort the keys and get everything in the same order. Object.values returns in the order of assignment
-    constructor(tableName: string, values: OptionalMulti<Omit<SchemaType, PrimaryKey>>) {
-        super();
+    constructor(tableName: string, values: OptionalMulti<Omit<SchemaType, PrimaryKey>>, connection?: IDbConnection) {
+        super(connection);
         values = prepOptionalMulti(values);
         const columns = Object.keys(values[0]);
+        const variables: Array<QueryVariable<SchemaType>> = [];
         const valueStrings = values.map(value => {
-            return `(${Object.values(value).map(value => this.formatValue(value as SchemaType[keyof SchemaType])).join(', ')})`;
+            const queryMarkers = Object.values(value).map(value => {
+                variables.push(value as QueryVariable<SchemaType>);
+                return '?';
+            }).join(', ')
+            return `(${queryMarkers})`;
         })
-        this.append(`INSERT INTO ${tableName} (${columns.join(', ')}) VALUES ${valueStrings.join(', ')}`);
-    }
-
-    exec(): Promise<void> {
-        return Promise.resolve();
+        this.append(`INSERT INTO ${tableName} (${columns.join(', ')}) VALUES ${valueStrings.join(', ')}`, variables);
     }
 };
 
