@@ -113,25 +113,16 @@ class QueryStatement<SchemaType> extends BaseStatement<SchemaType> {
             : this.constructAggregation(agg as WhereAggregation<SchemaType>);
         this.append(`WHERE ${query}`, variables);
         return this;
-        /*if (operator && value) {
-            this.append(`WHERE ${this.constructClause({field: agg as keyof SchemaType, operator, value} as WhereClause<SchemaType>)}`);
-            return this;
-        }
-
-        this.append(`WHERE ${this.constructAggregation(agg as WhereAggregation<SchemaType>)}`);
-        return this;*/
     }
 
     private constructAggregation(aggregation: WhereAggregation<SchemaType>): [string, Array<QueryVariable<SchemaType>>] {
         const variables: Array<QueryVariable<SchemaType>> = [];
         const agg = Object.keys(aggregation).map(chain => {
+            chain = chain as WhereChain;
             return aggregation[chain as WhereChain]?.map(condition => {
-                if ((condition as WhereClause<SchemaType>).field !== undefined) {
-                    const [query, vars] = this.constructClause((condition as WhereClause<SchemaType>));
-                    variables.push(...vars);
-                    return query;
-                }
-                const [query, vars] = this.constructAggregation(condition as WhereAggregation<SchemaType>);
+                const [query, vars] = (condition as WhereClause<SchemaType>).field !== undefined
+                    ? this.constructClause((condition as WhereClause<SchemaType>))
+                    : this.constructAggregation(condition as WhereAggregation<SchemaType>);
                 variables.push(...vars);
                 return query;
             }).join(` ${chain} `);

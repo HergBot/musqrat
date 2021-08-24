@@ -21,43 +21,4 @@ class Musqrat {
     }
 }
 
-async function main() {
-    const musqrat = new Musqrat();
-    musqrat.connect({
-        host: 'localhost',
-        user: 'test',
-        password: 'password',
-        database: 'world'
-    });
-
-    type CountrySchema = {
-        name: string;
-    }
-
-    const Country = musqrat.initTable<CountrySchema>('Country');
-
-    console.log(Country.select('name').where('name', '=', 'Aruba\'; Select * FROM Country;').query);
-    const results = await Country.select('name').where('name', '=', 'Aruba').exec()
-    console.log(results);
-    console.log(results[0].name);
-}
-main();
-
-
-
-/*
-
-What we want the code to look like:
-
-import musqrat from 'musqrat';
-
-type SomeTableSchema = {
-    id: number;
-    description: string;
-}
-
-const SomeTable: Table<SomeTableSchema> = musqrat.initTable<SomeTableSchema>('SomeTable');
-
-const results = SomeTable.select(...).exec();
-
-*/
+export default new Musqrat();
