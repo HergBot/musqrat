@@ -1,3 +1,4 @@
+import { IDbConnection } from '../src/connection';
 import { DeleteStatement, QueryStatement, SelectStatement, UpdateStatement, InsertStatement } from '../src/statement';
 import Table from '../src/table';
 import { Nullable } from '../src/utilities';
@@ -17,6 +18,18 @@ interface ForeignTableSchema {
 const TEST_TABLE: string = 'TEST_TABLE';
 
 const FOREIGN_TABLE: string = 'FOREIGN_TABLE';
+
+const TEST_RESULTS: TestTableSchema[] = [
+    {
+        tableId: 1,
+        description: 'description',
+        active: false
+    }
+];
+
+const MOCK_CONNECTION: IDbConnection = {
+    execute: jest.fn(async (x, y) => Promise.resolve([TEST_RESULTS, []]))
+}
 
 describe('class QueryStatement', () => {
     let statement: QueryStatement<TestTableSchema>;
@@ -115,6 +128,24 @@ describe('class QueryStatement', () => {
             });
             expect(statement.query).toEqual('WHERE ((tableId IN ? OR description IS NOT ?) AND active != ?)');
             expect(statement.variables).toEqual([[1], null, false]);
+        });
+    });
+
+    describe('method exec', () => {
+        describe('when given no connection', () => {
+            it('should throw an error', () => {
+                expect(statement.exec()).rejects.toThrow('Database not connected');
+            });
+        });
+
+        describe('when given a connection', () => {
+            beforeEach(() => {
+                statement = new QueryStatement<TestTableSchema>(MOCK_CONNECTION);
+            });
+
+            it('should return results', () => {
+                expect(statement.exec()).resolves.toEqual(TEST_RESULTS);
+            })
         });
     });
 });

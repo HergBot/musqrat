@@ -26,7 +26,7 @@ async function main() {
     musqrat.connect({
         host: 'localhost',
         user: 'test',
-        password: '',
+        password: 'password',
         database: 'world'
     });
 

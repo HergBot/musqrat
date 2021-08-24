@@ -1,9 +1,5 @@
 /*
 TODO:
-    - Execute query
-        - Safe guard params?
-        - Scrub query?
-        - End query with ;?
     - Options to calls
     - Advanced uses
         - Unions
@@ -11,8 +7,6 @@ TODO:
         - Function calls/stored procs?
 */
 
-import mysql from 'mysql2/promise';
-import { promisify } from 'util';
 import { IDbConnection } from './connection';
 
 import Table from "./table";
@@ -55,19 +49,15 @@ export type SetClause<Schema> = {
     }
 }[keyof Schema];
 
-interface IExecutableStatement {
-    exec: () => Promise<void>
-}
-
 class BaseStatement<SchemaType> {
     private _query: string;
     private _variables: Array<QueryVariable<SchemaType>>;
     private _dbConnection: IDbConnection | undefined;
 
-    constructor(pool?: IDbConnection) {
+    constructor(connection?: IDbConnection) {
         this._query = '';
         this._variables = [];
-        this._dbConnection = pool;
+        this._dbConnection = connection;
     }
 
     get query(): string {
@@ -82,24 +72,6 @@ class BaseStatement<SchemaType> {
         this._query = this._query === '' ? queryText : `${this._query} ${queryText}`;
         this._variables = [...this._variables, ...variables];
     }
-
-    protected formatValue<K extends keyof SchemaType>(value: SchemaType[K] | SchemaType[K][] | null): string {
-        if (value === null || value === undefined) {
-            return 'NULL';
-        } else if (Array.isArray(value)) {
-            const values = value.map(val => this.formatValue(val));
-            return `(${values.join(', ')})`;
-        }
-
-        switch(typeof value) {
-            case 'boolean':
-                return value === true ? 'TRUE' : "FALSE";
-            case 'string':
-                return `'${value}'`;
-            default:
-                return `${value}`;
-        }
-    }
     
     public async exec(): Promise<SchemaType[]> {
         if (this._dbConnection === undefined) {
@@ -107,8 +79,7 @@ class BaseStatement<SchemaType> {
         }
 
         const [rows, fields] = await this._dbConnection.execute(this._query, this._variables);
-        console.log(rows);
-        console.log(fields);
+        console.log(rows, fields);
         return rows as SchemaType[];
     }
 }
