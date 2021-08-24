@@ -1,5 +1,9 @@
 /*
 TODO:
+    - Bugs
+        - Group by can't be called in a 'logical' (to me) order. Where is usually first, group by isn't on QueryStatment
+    - Improvements
+        - Don't allow duplicates on SELECT statement fields
     - Options to calls
     - Advanced uses
         - Unions

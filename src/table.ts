@@ -1,8 +1,9 @@
 import { IDbConnection } from './connection';
 
-import { SelectStatement } from './statement';
+import { DeleteStatement, InsertStatement, SelectStatement, SetClause, UpdateStatement } from './statement';
+import { AnyKeyInArray, OptionalMulti } from './utilities';
 
-class Table<SchemaType> {
+class Table<SchemaType, PrimaryKey extends keyof SchemaType = never> {
     private _name: string;
     private _connection: IDbConnection | undefined;
 
@@ -15,16 +16,20 @@ class Table<SchemaType> {
         return this._name;
     }
 
-    select(...fields: (keyof SchemaType)[]): SelectStatement<SchemaType> {
-        return new SelectStatement(this._name, fields, this._connection);
+    delete(): DeleteStatement<SchemaType> {
+        return new DeleteStatement<SchemaType>(this._name, this._connection);
     }
 
-    update() {
-
+    insert(values: OptionalMulti<Omit<SchemaType, PrimaryKey>>): InsertStatement<SchemaType> {
+        return new InsertStatement<SchemaType, PrimaryKey>(this._name, values, this._connection);
     }
 
-    delete() {
+    select<JoinSchemas extends any[] = never[]>(...fields: (keyof SchemaType | AnyKeyInArray<JoinSchemas>[number])[]): SelectStatement<SchemaType, JoinSchemas> {
+        return new SelectStatement<SchemaType, JoinSchemas>(this._name, fields, this._connection);
+    }
 
+    update(updates: OptionalMulti<SetClause<SchemaType>>) {
+        return new UpdateStatement<SchemaType>(this._name, updates, this._connection);
     }
 };
 
