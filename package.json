@@ -1,13 +1,14 @@
 {
   "name": "musqrat",
   "version": "0.1.0",
-  "description": "A TypeScript driven query builder wrapping the mysql node package",
-  "main": "index.ts",
+  "description": "A lightweight, strongly typed wrapper for using MySQL in Node.js",
+  "main": "/dist/index.js",
   "scripts": {
     "build": "tsc",
-    "test": "jest"
+    "test": "jest",
+    "prepublish": "tsc"
   },
-  "author": "",
+  "author": "xHergz",
   "license": "ISC",
   "dependencies": {
     "mysql2": "^2.3.0",
