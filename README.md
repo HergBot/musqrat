@@ -189,6 +189,7 @@ await Table.update({ field: "nullableColumn", value: null })
     -   `groupBy` can't be called in a 'logical' (to me) order. `where` is usually first, `groupBy` isn't on `QueryStatment`
 -   Improvements
     -   Don't allow duplicates on `select` statement fields
+    -   Overload for `inner join` that accepts just 1 parameter that is a key on both types and uses the USING syntax?
 -   Options to calls
 -   Advanced uses
     -   Views
