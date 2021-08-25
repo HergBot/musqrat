@@ -1,0 +1,23 @@
+{
+  "name": "musqrat",
+  "version": "0.1.0",
+  "description": "A lightweight, strongly typed wrapper for using MySQL in Node.js",
+  "main": "/dist/index.js",
+  "scripts": {
+    "build": "tsc",
+    "test": "jest",
+    "prepublish": "tsc"
+  },
+  "author": "xHergz",
+  "license": "ISC",
+  "dependencies": {
+    "mysql2": "^2.3.0",
+    "typescript": "^4.3.3"
+  },
+  "devDependencies": {
+    "@types/jest": "^26.0.23",
+    "jest": "^27.0.4",
+    "ts-jest": "^27.0.3",
+    "ts-node": "^10.0.0"
+  }
+}
