@@ -1,23 +1,54 @@
-import mysql from 'mysql2/promise';
+import mysql from "mysql2/promise";
 
-import Table from './table';
+import Table from "./table";
 
+/**
+ * The root Musqrat class that handles the MySQL connection and initializing connected components.
+ */
 class Musqrat {
     private _pool: mysql.Pool | null;
 
     constructor() {
         this._pool = null;
     }
-    
-    public connect(config: mysql.PoolOptions) {
+
+    /**
+     * Determines if the database is currently connected or not.
+     */
+    public get connected(): boolean {
+        return this._pool !== null;
+    }
+
+    /**
+     * Creates the connection to the database.
+     * @param config The MySQL pool connection options.
+     */
+    public connect(config: mysql.PoolOptions): void {
         this._pool = mysql.createPool(config);
     }
 
-    public initTable<TableSchema>(tableName: string): Table<TableSchema> {
-        if (this._pool === null) {
-            throw new Error('no connection initialized');
+    /**
+     * Disconnects from the database.
+     */
+    public async disconnect(): Promise<void> {
+        if (this._pool !== null) {
+            await this._pool.end();
+            this._pool = null;
         }
-        return new Table<TableSchema>(tableName, this._pool);
+    }
+
+    /**
+     * Initializes a table with the database connection.
+     * @param tableName The table name.
+     * @returns The initialized table object.
+     */
+    public initTable<TableSchema, PrimaryKey extends keyof TableSchema = never>(
+        tableName: string
+    ): Table<TableSchema> {
+        if (this._pool === null) {
+            throw new Error("No connection initialized");
+        }
+        return new Table<TableSchema, PrimaryKey>(tableName, this._pool);
     }
 }
 
