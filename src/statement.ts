@@ -1,7 +1,12 @@
 import { IDbConnection } from "./connection";
 
 import Table from "./table";
-import { AnyKeyInArray, OptionalMulti, prepOptionalMulti } from "./utilities";
+import {
+    AnyKeyInArray,
+    OptionalMulti,
+    UnionToIntersection,
+    prepOptionalMulti,
+} from "./utilities";
 
 // All allowed order by directions
 export type Order = "ASC" | "DESC";
@@ -129,10 +134,7 @@ class BaseStatement<SchemaType> {
 /**
  * Holds some common query filters that are used with multiple different statement types.
  */
-class QueryStatement<
-    SchemaType,
-    JoinSchemas extends any[] = never[]
-> extends BaseStatement<SchemaType> {
+class QueryStatement<SchemaType> extends BaseStatement<SchemaType> {
     constructor(connection?: IDbConnection) {
         super(connection);
     }
@@ -142,7 +144,7 @@ class QueryStatement<
      * @param amount The limit amount.
      * @returns The full statement with the added limit.
      */
-    public limit(amount: number): QueryStatement<SchemaType, JoinSchemas> {
+    public limit(amount: number): QueryStatement<SchemaType> {
         this.append(`LIMIT ${amount}`);
         return this;
     }
@@ -154,9 +156,9 @@ class QueryStatement<
      * @returns The full statement with the added order by.
      */
     public orderBy(
-        column: keyof SchemaType | AnyKeyInArray<JoinSchemas>[number],
+        column: keyof SchemaType,
         order: Order = "ASC"
-    ): QueryStatement<SchemaType, JoinSchemas> {
+    ): QueryStatement<SchemaType> {
         this.append(`ORDER BY ${column} ${order}`);
         return this;
     }
@@ -169,24 +171,20 @@ class QueryStatement<
      * @returns The full statement with the added where.
      */
     public where(
-        field: keyof SchemaType | AnyKeyInArray<JoinSchemas>[number],
+        field: keyof SchemaType,
         operator: Extract<WhereOp, "IN">,
-        value:
-            | SchemaType[keyof SchemaType][]
-            | JoinSchemas[number][AnyKeyInArray<JoinSchemas>[number]][]
-    ): QueryStatement<SchemaType, JoinSchemas>;
+        value: SchemaType[keyof SchemaType][]
+    ): QueryStatement<SchemaType>;
     public where(
-        field: keyof SchemaType | AnyKeyInArray<JoinSchemas>[number],
+        field: keyof SchemaType,
         operator: Extract<WhereOp, "IS" | "IS NOT">,
         value: null
-    ): QueryStatement<SchemaType, JoinSchemas>;
+    ): QueryStatement<SchemaType>;
     public where(
-        field: keyof SchemaType | AnyKeyInArray<JoinSchemas>[number],
+        field: keyof SchemaType,
         operator: Exclude<WhereOp, "IN" | "IS" | "IS NOT">,
-        value:
-            | SchemaType[keyof SchemaType]
-            | JoinSchemas[number][AnyKeyInArray<JoinSchemas>[number]]
-    ): QueryStatement<SchemaType, JoinSchemas>;
+        value: SchemaType[keyof SchemaType]
+    ): QueryStatement<SchemaType>;
     /**
      * Adds a multiple condition where clause to the query.
      * @param aggregation An aggregation object with as many levels as necessary.
@@ -194,17 +192,13 @@ class QueryStatement<
      */
     public where(
         aggregation: WhereAggregation<SchemaType>
-    ): QueryStatement<SchemaType, JoinSchemas>;
+    ): QueryStatement<SchemaType>;
     public where(
-        agg:
-            | (keyof SchemaType | AnyKeyInArray<JoinSchemas>[number])
-            | WhereAggregation<SchemaType>,
+        agg: keyof SchemaType | WhereAggregation<SchemaType>,
         operator?: WhereOp,
         value?:
             | SchemaType[keyof SchemaType]
             | SchemaType[keyof SchemaType][]
-            | JoinSchemas[number][AnyKeyInArray<JoinSchemas>[number]]
-            | JoinSchemas[number][AnyKeyInArray<JoinSchemas>[number]][]
             | null
     ) {
         const [query, variables] =
@@ -268,10 +262,13 @@ class QueryStatement<
 class SelectStatement<
     SchemaType,
     JoinSchemas extends any[] = never[]
-> extends QueryStatement<SchemaType> {
+> extends QueryStatement<
+    SchemaType & UnionToIntersection<JoinSchemas[number]>
+> {
     constructor(
         tableName: string,
-        fields: (keyof SchemaType | AnyKeyInArray<JoinSchemas>[number])[] = [],
+        fields: (keyof (SchemaType &
+            UnionToIntersection<JoinSchemas[number]>))[] = [],
         connection?: IDbConnection
     ) {
         super(connection);
@@ -303,7 +300,7 @@ class SelectStatement<
      * @returns The full statement with the group by applied.
      */
     groupBy(
-        column: keyof SchemaType | AnyKeyInArray<JoinSchemas>[number]
+        column: keyof (SchemaType & UnionToIntersection<JoinSchemas[number]>)
     ): SelectStatement<SchemaType, JoinSchemas> {
         this.append(`GROUP BY ${column}`);
         return this;

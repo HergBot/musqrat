@@ -12,6 +12,13 @@ export type NonEmptyArray<T> = [T, ...T[]];
 // A single value or array of values
 export type OptionalMulti<T> = T | NonEmptyArray<T>;
 
+// Source: https://stackoverflow.com/a/58310689
+export type UnionToIntersection<U> = (
+    U extends any ? (k: U) => void : never
+) extends (k: infer I) => void
+    ? I
+    : never;
+
 /**
  * Makes sure an optional multi is always an array.
  * @param value The value, single value or array of values.
