@@ -45,10 +45,7 @@ class Musqrat {
     public initTable<TableSchema, PrimaryKey extends keyof TableSchema = never>(
         tableName: string
     ): Table<TableSchema, PrimaryKey> {
-        if (this._pool === null) {
-            throw new Error("No connection initialized");
-        }
-        return new Table<TableSchema, PrimaryKey>(tableName, this._pool);
+        return new Table<TableSchema, PrimaryKey>(tableName, this._pool || undefined);
     }
 }
 
