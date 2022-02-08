@@ -71,6 +71,56 @@ export type SetClause<Schema> = {
     };
 }[keyof Schema];
 
+export type InsertValue<Schema, PrimaryKey extends keyof Schema = never> = Omit<
+    Schema,
+    PrimaryKey
+>;
+
+/*export interface IBaseStatement<SchemaType> {
+    query: string;
+    variables: Array<QueryVariable<SchemaType>>;
+    exec: () => Promise<SchemaType[]>;
+}
+
+export interface IQueryStatement<SchemaType>
+    extends IBaseStatement<SchemaType> {
+    limit: (amount: number) => IQueryStatement<SchemaType>;
+    orderBy: (
+        column: keyof SchemaType,
+        order: Order
+    ) => IQueryStatement<SchemaType>;
+    where:
+        | ((
+              field: keyof SchemaType,
+              operator: Extract<WhereOp, "IN">,
+              value: SchemaType[keyof SchemaType][]
+          ) => IQueryStatement<SchemaType>)
+        | ((
+              field: keyof SchemaType,
+              operator: Extract<WhereOp, "IS" | "IS NOT">,
+              value: null
+          ) => IQueryStatement<SchemaType>)
+        | ((
+              field: keyof SchemaType,
+              operator: Exclude<WhereOp, "IN" | "IS" | "IS NOT">,
+              value: SchemaType[keyof SchemaType]
+          ) => IQueryStatement<SchemaType>)
+        | ((
+              aggregation: WhereAggregation<SchemaType>
+          ) => IQueryStatement<SchemaType>);
+}
+
+export interface ISelectStatement<SchemaType, JoinSchemas extends any[]> {
+    innerJoin: <JoinSchema extends JoinSchemas[number]>(
+        foreignTable: Table<JoinSchema>,
+        foreignColumn: keyof JoinSchema,
+        localColumn: keyof SchemaType
+    ) => ISelectStatement<SchemaType, JoinSchemas>;
+    groupBy: (
+        column: keyof (SchemaType & UnionToIntersection<JoinSchemas[number]>)
+    ) => ISelectStatement<SchemaType, JoinSchemas>;
+}*/
+
 /**
  * The lowest level of constructing/executing a statement.
  */
@@ -367,6 +417,7 @@ class InsertStatement<
 }
 
 export {
+    BaseStatement,
     QueryStatement,
     SelectStatement,
     UpdateStatement,
