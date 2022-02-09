@@ -3,6 +3,7 @@ import { IDbConnection } from "./connection";
 import {
     DeleteStatement,
     InsertStatement,
+    InsertValue,
     SelectStatement,
     SetClause,
     UpdateStatement,
@@ -39,7 +40,7 @@ class Table<SchemaType, PrimaryKey extends keyof SchemaType = never> {
      * @returns The base insert statement.
      */
     insert(
-        values: OptionalMulti<Omit<SchemaType, PrimaryKey>>
+        values: OptionalMulti<InsertValue<SchemaType, PrimaryKey>>
     ): InsertStatement<SchemaType> {
         return new InsertStatement<SchemaType, PrimaryKey>(
             this._name,

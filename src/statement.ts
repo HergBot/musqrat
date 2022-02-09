@@ -71,6 +71,11 @@ export type SetClause<Schema> = {
     };
 }[keyof Schema];
 
+export type InsertValue<Schema, PrimaryKey extends keyof Schema = never> = Omit<
+    Schema,
+    PrimaryKey
+>;
+
 /**
  * The lowest level of constructing/executing a statement.
  */
@@ -341,7 +346,7 @@ class InsertStatement<
     // We need to sort the keys and get everything in the same order. Object.values returns in the order of assignment
     constructor(
         tableName: string,
-        values: OptionalMulti<Omit<SchemaType, PrimaryKey>>,
+        values: OptionalMulti<InsertValue<SchemaType, PrimaryKey>>,
         connection?: IDbConnection
     ) {
         super(connection);
