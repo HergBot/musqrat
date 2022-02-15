@@ -66,6 +66,46 @@ describe("function mockInsert", () => {
 });
 
 describe("function mockSelect", () => {
+  describe("with join schemas", () => {
+    let spy: jest.SpyInstance<
+      SelectStatement<TestTableSchema, [JoinTableSchema]>
+    >;
+
+    afterEach(() => {
+      if (spy) {
+        spy.mockRestore();
+      }
+    });
+
+    it("should return the values given to it", async () => {
+      spy = mockSelect(testTable, MOCK_VALUES);
+      const results = await testTable.select().exec();
+      expect(results).toEqual(MOCK_VALUES);
+    });
+
+    it("should return an empty array if no values are supposed to be returned", async () => {
+      spy = mockSelect(testTable);
+      const results = await testTable.select().exec();
+      expect(results).toEqual([]);
+    });
+  });
+
+  describe("without join schemas", () => {
+    let spy: jest.SpyInstance<SelectStatement<TestTableSchema>>;
+
+    afterEach(() => {
+      if (spy) {
+        spy.mockRestore();
+      }
+    });
+
+    it("should return the values given to it", async () => {
+      spy = mockSelect(testTable, MOCK_VALUES);
+      const results = await testTable.select().exec();
+      expect(results).toEqual(MOCK_VALUES);
+    });
+  });
+
   let spy: jest.SpyInstance<
     SelectStatement<TestTableSchema, [JoinTableSchema]>
   >;
