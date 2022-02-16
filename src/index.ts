@@ -1,6 +1,14 @@
 import mysql from "mysql2/promise";
+import {
+    DeleteStatement,
+    InsertStatement,
+    QueryStatement,
+    SelectStatement,
+    UpdateStatement,
+} from "./statement";
 
 import Table from "./table";
+import { mockDelete, mockInsert, mockSelect, mockUpdate } from "./testing";
 
 /**
  * The root Musqrat class that handles the MySQL connection and initializing connected components.
@@ -45,8 +53,26 @@ class Musqrat {
     public initTable<TableSchema, PrimaryKey extends keyof TableSchema = never>(
         tableName: string
     ): Table<TableSchema, PrimaryKey> {
-        return new Table<TableSchema, PrimaryKey>(tableName, this._pool || undefined);
+        return new Table<TableSchema, PrimaryKey>(
+            tableName,
+            this._pool || undefined
+        );
     }
 }
 
 export default new Musqrat();
+
+export {
+    QueryStatement,
+    SelectStatement,
+    UpdateStatement,
+    DeleteStatement,
+    InsertStatement,
+    Table,
+    mockDelete,
+    mockInsert,
+    mockSelect,
+    mockUpdate,
+};
+
+export * from "./utilities";
