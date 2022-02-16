@@ -8,13 +8,18 @@ import {
   SetClause,
 } from "./statement";
 import Table from "./table";
-import { OptionalMulti, prepOptionalMulti } from "./utilities";
+import {
+  OptionalEmptyMulti,
+  OptionalMulti,
+  prepOptionalEmptyMulti,
+  prepOptionalMulti,
+} from "./utilities";
 
 class MockDbConnection<SchemaType> implements IDbConnection {
   private _results: Array<SchemaType>;
 
-  constructor(results: OptionalMulti<SchemaType>) {
-    this._results = prepOptionalMulti(results);
+  constructor(results: OptionalEmptyMulti<SchemaType>) {
+    this._results = prepOptionalEmptyMulti(results);
   }
 
   public async execute(query: string, values: any): Promise<[any[], any[]]> {
@@ -56,7 +61,7 @@ export const mockSelect = <
   JoinSchemas extends any[] = never[]
 >(
   table: Table<SchemaType, PrimaryKey>,
-  values: OptionalMulti<SchemaType>
+  values: OptionalEmptyMulti<SchemaType> = []
 ): jest.SpyInstance<SelectStatement<SchemaType, JoinSchemas>> => {
   // This cast is to stop a TypeScript error around JoinSchemas and any[]
   // https://github.com/DefinitelyTyped/DefinitelyTyped/issues/33173
@@ -77,7 +82,7 @@ export const mockSelect = <
 export const mockUpdate = <SchemaType>(
   table: Table<SchemaType>,
   updates: OptionalMulti<SetClause<SchemaType>>,
-  values: OptionalMulti<SchemaType>
+  values: OptionalEmptyMulti<SchemaType>
 ): jest.SpyInstance<UpdateStatement<SchemaType>> => {
   return jest
     .spyOn(table, "update")
