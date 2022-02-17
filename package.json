@@ -11,6 +11,8 @@
     "scripts": {
         "build": "tsc",
         "test": "jest",
+        "test-watch": "jest --watch",
+        "test-watch-all": "jest --watchAll",
         "prepare": "tsc"
     },
     "author": "xHergz",
