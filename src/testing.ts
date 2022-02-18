@@ -12,10 +12,9 @@ import {
     OptionalEmptyMulti,
     OptionalMulti,
     prepOptionalEmptyMulti,
-    prepOptionalMulti,
 } from "./utilities";
 
-export const GENERIC_MUSQAT_ERROR = "Generic Musqrat Mock Error";
+export const GENERIC_MUSQRAT_ERROR = "Generic Musqrat Mock Error";
 
 class MockDbConnection<SchemaType> implements IDbConnection {
     private _results: Array<SchemaType>;
@@ -35,7 +34,7 @@ class MockDbConnection<SchemaType> implements IDbConnection {
 class ErrorDbConnection implements IDbConnection {
     private _error: string;
 
-    constructor(error: string = GENERIC_MUSQAT_ERROR) {
+    constructor(error: string = GENERIC_MUSQRAT_ERROR) {
         this._error = error;
     }
 

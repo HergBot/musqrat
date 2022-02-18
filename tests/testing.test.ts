@@ -7,7 +7,7 @@ import {
 } from "../src/statement";
 import Table from "../src/table";
 import {
-    GENERIC_MUSQAT_ERROR,
+    GENERIC_MUSQRAT_ERROR,
     mockDelete,
     mockInsert,
     mockSelect,
@@ -55,9 +55,9 @@ describe("function mockDelete", () => {
     });
 
     it("should throw the default error message", async () => {
-        spy = mockDelete(testTable, GENERIC_MUSQAT_ERROR);
+        spy = mockDelete(testTable, GENERIC_MUSQRAT_ERROR);
         expect(testTable.delete().exec()).rejects.toThrowError(
-            GENERIC_MUSQAT_ERROR
+            GENERIC_MUSQRAT_ERROR
         );
     });
 });
@@ -78,10 +78,10 @@ describe("function mockInsert", () => {
     });
 
     it("should throw the default error message", async () => {
-        spy = mockInsert(testTable, MOCK_INSERT_VALUES, GENERIC_MUSQAT_ERROR);
+        spy = mockInsert(testTable, MOCK_INSERT_VALUES, GENERIC_MUSQRAT_ERROR);
         expect(
             testTable.insert(MOCK_INSERT_VALUES).exec()
-        ).rejects.toThrowError(GENERIC_MUSQAT_ERROR);
+        ).rejects.toThrowError(GENERIC_MUSQRAT_ERROR);
     });
 });
 
@@ -110,9 +110,9 @@ describe("function mockSelect", () => {
         });
 
         it("should throw the default error message", async () => {
-            spy = mockSelect(testTable, [], GENERIC_MUSQAT_ERROR);
+            spy = mockSelect(testTable, [], GENERIC_MUSQRAT_ERROR);
             expect(testTable.select().exec()).rejects.toThrowError(
-                GENERIC_MUSQAT_ERROR
+                GENERIC_MUSQRAT_ERROR
             );
         });
     });
@@ -133,9 +133,9 @@ describe("function mockSelect", () => {
         });
 
         it("should throw the default error message", async () => {
-            spy = mockSelect(testTable, [], GENERIC_MUSQAT_ERROR);
+            spy = mockSelect(testTable, [], GENERIC_MUSQRAT_ERROR);
             expect(testTable.select().exec()).rejects.toThrowError(
-                GENERIC_MUSQAT_ERROR
+                GENERIC_MUSQRAT_ERROR
             );
         });
     });
@@ -167,10 +167,10 @@ describe("function mockUpdate", () => {
             testTable,
             { field: "active", value: false },
             MOCK_VALUES,
-            GENERIC_MUSQAT_ERROR
+            GENERIC_MUSQRAT_ERROR
         );
         expect(
             testTable.update({ field: "active", value: false }).exec()
-        ).rejects.toThrowError(GENERIC_MUSQAT_ERROR);
+        ).rejects.toThrowError(GENERIC_MUSQRAT_ERROR);
     });
 });
