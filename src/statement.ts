@@ -64,12 +64,12 @@ export type WhereAggregation<Schema> = {
 export type QueryVariable<T> = T[keyof T] | T[keyof T][] | null;
 
 // Can we add another type that is a Tuple or whatever to have an option for less verbose syntax? i.e. ['tableId', 5]
-export type SetClause<Schema> = {
-    [K in keyof Schema]: {
+export type SetClause<Schema, PrimaryKey extends keyof Schema = never> = {
+    [K in Exclude<keyof Schema, PrimaryKey>]: {
         field: K;
         value: Schema[K];
     };
-}[keyof Schema];
+}[Exclude<keyof Schema, PrimaryKey>];
 
 export type InsertValue<Schema, PrimaryKey extends keyof Schema = never> = Omit<
     Schema,
@@ -312,10 +312,13 @@ class SelectStatement<
     }
 }
 
-class UpdateStatement<SchemaType> extends QueryStatement<SchemaType> {
+class UpdateStatement<
+    SchemaType,
+    PrimaryKey extends keyof SchemaType = never
+> extends QueryStatement<SchemaType> {
     constructor(
         tableName: string,
-        updates: OptionalMulti<SetClause<SchemaType>>,
+        updates: OptionalMulti<SetClause<SchemaType, PrimaryKey>>,
         connection?: IDbConnection
     ) {
         super(connection);
