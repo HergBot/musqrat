@@ -106,9 +106,12 @@ export const mockSelect = <
     return spy;
 };
 
-export const mockUpdate = <SchemaType>(
-    table: Table<SchemaType>,
-    updates: OptionalMulti<SetClause<SchemaType>>,
+export const mockUpdate = <
+    SchemaType,
+    PrimaryKey extends keyof SchemaType = never
+>(
+    table: Table<SchemaType, PrimaryKey>,
+    updates: OptionalMulti<SetClause<SchemaType, PrimaryKey>>,
     values: OptionalEmptyMulti<SchemaType>,
     error?: string
 ): jest.SpyInstance<UpdateStatement<SchemaType>> => {
