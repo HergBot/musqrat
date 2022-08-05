@@ -48,6 +48,8 @@ class Musqrat {
 
 export default new Musqrat();
 
+export { Table };
+
 export * from "./connection";
 export * from "./statement";
 export * from "./table";
