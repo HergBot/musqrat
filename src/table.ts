@@ -69,7 +69,7 @@ class Table<SchemaType, PrimaryKey extends keyof SchemaType = never> {
      * @param updates The updates to make.
      * @returns The base update statement.
      */
-    update(updates: OptionalMulti<SetClause<SchemaType>>) {
+    update(updates: OptionalMulti<SetClause<SchemaType, PrimaryKey>>) {
         return new UpdateStatement<SchemaType>(
             this._name,
             updates,
