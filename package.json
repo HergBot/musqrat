@@ -11,6 +11,7 @@
     "scripts": {
         "build": "tsc",
         "test": "jest",
+        "test-app": "ts-node tests/test-app.ts",
         "test-watch": "jest --watch",
         "test-watch-all": "jest --watchAll",
         "prepare": "tsc"
