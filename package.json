@@ -1,6 +1,6 @@
 {
     "name": "musqrat",
-    "version": "0.1.15",
+    "version": "0.2.0",
     "description": "A lightweight, strongly typed wrapper for using MySQL in Node.js",
     "main": "./dist/index.js",
     "types": "./dist/index.d.ts",
@@ -11,6 +11,7 @@
     "scripts": {
         "build": "tsc",
         "test": "jest",
+        "test-app": "ts-node tests/test-app.ts",
         "test-watch": "jest --watch",
         "test-watch-all": "jest --watchAll",
         "prepare": "tsc"

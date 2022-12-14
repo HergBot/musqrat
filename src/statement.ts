@@ -76,6 +76,16 @@ export type InsertValue<Schema, PrimaryKey extends keyof Schema = never> = Omit<
     PrimaryKey
 >;
 
+export type WriteMetaData = {
+    fieldCount: number;
+    affectedRows: number;
+    insertId: number;
+    info: string;
+    serverStatus: number;
+    warningStatus: number;
+    changedRows?: number;
+};
+
 /**
  * The lowest level of constructing/executing a statement.
  */
@@ -123,7 +133,7 @@ class BaseStatement<SchemaType> {
      * @throws When the database connection is not given.
      * @returns The rows returned if any.
      */
-    public async exec(): Promise<SchemaType[]> {
+    public async exec(): Promise<SchemaType[] | WriteMetaData> {
         if (this._dbConnection === undefined) {
             throw new Error("Database not connected");
         }
@@ -132,7 +142,7 @@ class BaseStatement<SchemaType> {
             this._query,
             this._variables
         );
-        return rows as SchemaType[];
+        return Array.isArray(rows) ? rows as SchemaType[] : rows as WriteMetaData;
     }
 }
 
@@ -164,7 +174,7 @@ class QueryStatement<SchemaType> extends BaseStatement<SchemaType> {
         column: keyof SchemaType,
         order: Order = "ASC"
     ): QueryStatement<SchemaType> {
-        this.append(`ORDER BY ${column} ${order}`);
+        this.append(`ORDER BY ${column.toString()} ${order}`);
         return this;
     }
 
@@ -260,7 +270,7 @@ class QueryStatement<SchemaType> extends BaseStatement<SchemaType> {
     private constructClause(
         clause: WhereClause<SchemaType>
     ): [string, Array<QueryVariable<SchemaType>>] {
-        return [`${clause.field} ${clause.operator} ?`, [clause.value]];
+        return [`${clause.field.toString()} ${clause.operator} ?`, [clause.value]];
     }
 }
 
@@ -294,7 +304,7 @@ class SelectStatement<
         localColumn: keyof SchemaType
     ): SelectStatement<SchemaType, JoinSchemas> {
         this.append(
-            `INNER JOIN ${foreignTable.name} ON ${foreignColumn} = ${localColumn}`
+            `INNER JOIN ${foreignTable.name} ON ${foreignColumn.toString()} = ${localColumn.toString()}`
         );
         return this;
     }
@@ -307,8 +317,12 @@ class SelectStatement<
     groupBy(
         column: keyof (SchemaType & UnionToIntersection<JoinSchemas[number]>)
     ): SelectStatement<SchemaType, JoinSchemas> {
-        this.append(`GROUP BY ${column}`);
+        this.append(`GROUP BY ${column.toString()}`);
         return this;
+    }
+
+    public async exec(): Promise<(SchemaType & UnionToIntersection<JoinSchemas[number]>)[]> {
+        return await super.exec() as (SchemaType & UnionToIntersection<JoinSchemas[number]>)[];
     }
 }
 
@@ -328,10 +342,14 @@ class UpdateStatement<
         const setString = updates
             .map((update) => {
                 variables.push(update.value);
-                return `${update.field} = ?`;
+                return `${update.field.toString()} = ?`;
             })
             .join(", ");
         this.append(`SET ${setString}`, variables);
+    }
+
+    public async exec(): Promise<WriteMetaData> {
+        return await super.exec() as WriteMetaData;
     }
 }
 
@@ -339,6 +357,10 @@ class DeleteStatement<SchemaType> extends QueryStatement<SchemaType> {
     constructor(tableName: string, connection?: IDbConnection) {
         super(connection);
         this.append(`DELETE FROM ${tableName}`);
+    }
+
+    public async exec(): Promise<WriteMetaData> {
+        return await super.exec() as WriteMetaData;
     }
 }
 
@@ -371,6 +393,10 @@ class InsertStatement<
             )}) VALUES ${valueStrings.join(", ")}`,
             variables
         );
+    }
+
+    public async exec(): Promise<WriteMetaData> {
+        return await super.exec() as WriteMetaData;
     }
 }
 
