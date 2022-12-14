@@ -48,6 +48,7 @@ class Musqrat {
 
 export default new Musqrat();
 
+// Export default isn't covered by export *
 export { Table };
 
 export * from "./connection";
