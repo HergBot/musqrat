@@ -38,10 +38,10 @@ const MOCK_CONNECTION: IDbConnection = {
 };
 
 describe("class QueryStatement", () => {
-    let statement: QueryStatement<TestTableSchema>;
+    let statement: QueryStatement<TestTableSchema, TestTableSchema[]>;
 
     beforeEach(() => {
-        statement = new QueryStatement<TestTableSchema>();
+        statement = new QueryStatement<TestTableSchema, TestTableSchema[]>();
     });
 
     describe("method limit", () => {
@@ -154,7 +154,7 @@ describe("class QueryStatement", () => {
 
         describe("when given a connection", () => {
             beforeEach(() => {
-                statement = new QueryStatement<TestTableSchema>(
+                statement = new QueryStatement<TestTableSchema, TestTableSchema[]>(
                     MOCK_CONNECTION
                 );
             });
