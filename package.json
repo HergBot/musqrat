@@ -1,6 +1,6 @@
 {
     "name": "musqrat",
-    "version": "0.2.0",
+    "version": "0.2.1",
     "description": "A lightweight, strongly typed wrapper for using MySQL in Node.js",
     "main": "./dist/index.js",
     "types": "./dist/index.d.ts",
