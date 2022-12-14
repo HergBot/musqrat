@@ -89,7 +89,7 @@ export type WriteMetaData = {
 /**
  * The lowest level of constructing/executing a statement.
  */
-class BaseStatement<SchemaType> {
+class BaseStatement<SchemaType, ReturnType> {
     private _query: string;
     private _variables: Array<QueryVariable<SchemaType>>;
     private _dbConnection: IDbConnection | undefined;
@@ -133,7 +133,7 @@ class BaseStatement<SchemaType> {
      * @throws When the database connection is not given.
      * @returns The rows returned if any.
      */
-    public async exec(): Promise<SchemaType[] | WriteMetaData> {
+    public async exec(): Promise<ReturnType> {
         if (this._dbConnection === undefined) {
             throw new Error("Database not connected");
         }
@@ -142,14 +142,14 @@ class BaseStatement<SchemaType> {
             this._query,
             this._variables
         );
-        return Array.isArray(rows) ? rows as SchemaType[] : rows as WriteMetaData;
+        return Array.isArray(rows) ? rows as unknown as ReturnType : rows as ReturnType;
     }
 }
 
 /**
  * Holds some common query filters that are used with multiple different statement types.
  */
-class QueryStatement<SchemaType> extends BaseStatement<SchemaType> {
+class QueryStatement<SchemaType, ReturnType> extends BaseStatement<SchemaType, ReturnType> {
     constructor(connection?: IDbConnection) {
         super(connection);
     }
@@ -159,7 +159,7 @@ class QueryStatement<SchemaType> extends BaseStatement<SchemaType> {
      * @param amount The limit amount.
      * @returns The full statement with the added limit.
      */
-    public limit(amount: number): QueryStatement<SchemaType> {
+    public limit(amount: number): QueryStatement<SchemaType, ReturnType> {
         this.append(`LIMIT ${amount}`);
         return this;
     }
@@ -173,7 +173,7 @@ class QueryStatement<SchemaType> extends BaseStatement<SchemaType> {
     public orderBy(
         column: keyof SchemaType,
         order: Order = "ASC"
-    ): QueryStatement<SchemaType> {
+    ): QueryStatement<SchemaType, ReturnType> {
         this.append(`ORDER BY ${column.toString()} ${order}`);
         return this;
     }
@@ -189,17 +189,17 @@ class QueryStatement<SchemaType> extends BaseStatement<SchemaType> {
         field: keyof SchemaType,
         operator: Extract<WhereOp, "IN">,
         value: SchemaType[keyof SchemaType][]
-    ): QueryStatement<SchemaType>;
+    ): QueryStatement<SchemaType, ReturnType>;
     public where(
         field: keyof SchemaType,
         operator: Extract<WhereOp, "IS" | "IS NOT">,
         value: null
-    ): QueryStatement<SchemaType>;
+    ): QueryStatement<SchemaType, ReturnType>;
     public where(
         field: keyof SchemaType,
         operator: Exclude<WhereOp, "IN" | "IS" | "IS NOT">,
         value: SchemaType[keyof SchemaType]
-    ): QueryStatement<SchemaType>;
+    ): QueryStatement<SchemaType, ReturnType>;
     /**
      * Adds a multiple condition where clause to the query.
      * @param aggregation An aggregation object with as many levels as necessary.
@@ -207,7 +207,7 @@ class QueryStatement<SchemaType> extends BaseStatement<SchemaType> {
      */
     public where(
         aggregation: WhereAggregation<SchemaType>
-    ): QueryStatement<SchemaType>;
+    ): QueryStatement<SchemaType, ReturnType>;
     public where(
         agg: keyof SchemaType | WhereAggregation<SchemaType>,
         operator?: WhereOp,
@@ -278,7 +278,7 @@ class SelectStatement<
     SchemaType,
     JoinSchemas extends any[] = never[]
 > extends QueryStatement<
-    SchemaType & UnionToIntersection<JoinSchemas[number]>
+    SchemaType & UnionToIntersection<JoinSchemas[number]>, (SchemaType & UnionToIntersection<JoinSchemas[number]>)[]
 > {
     constructor(
         tableName: string,
@@ -329,7 +329,7 @@ class SelectStatement<
 class UpdateStatement<
     SchemaType,
     PrimaryKey extends keyof SchemaType = never
-> extends QueryStatement<SchemaType> {
+> extends QueryStatement<SchemaType, WriteMetaData> {
     constructor(
         tableName: string,
         updates: OptionalMulti<SetClause<SchemaType, PrimaryKey>>,
@@ -353,7 +353,7 @@ class UpdateStatement<
     }
 }
 
-class DeleteStatement<SchemaType> extends QueryStatement<SchemaType> {
+class DeleteStatement<SchemaType> extends QueryStatement<SchemaType, WriteMetaData> {
     constructor(tableName: string, connection?: IDbConnection) {
         super(connection);
         this.append(`DELETE FROM ${tableName}`);
@@ -367,7 +367,7 @@ class DeleteStatement<SchemaType> extends QueryStatement<SchemaType> {
 class InsertStatement<
     SchemaType,
     PrimaryKey extends keyof SchemaType = never
-> extends BaseStatement<SchemaType> {
+> extends BaseStatement<SchemaType, WriteMetaData> {
     // We need to sort the keys and get everything in the same order. Object.values returns in the order of assignment
     constructor(
         tableName: string,
