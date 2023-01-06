@@ -58,8 +58,8 @@ export const prepOptionalEmptyMulti = <T>(
  */
 export const getUpdates = <Schema, PrimaryKey extends keyof Schema = never>(
     modified: SchemaUpdate<Schema, PrimaryKey>
-): OptionalMulti<SetClause<Schema>> | null => {
-    let updates: OptionalMulti<SetClause<Schema>> | null = null;
+): OptionalMulti<SetClause<Schema, PrimaryKey>> | null => {
+    let updates: OptionalMulti<SetClause<Schema, PrimaryKey>> | null = null;
     let key: keyof SchemaUpdate<Schema, PrimaryKey>;
     for (key in modified) {
         const value = modified[key];
