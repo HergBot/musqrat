@@ -58,6 +58,13 @@ async function main() {
   console.log("\nSelect result:");
   console.log(JSON.stringify(result));
 
+  // Select with where
+  const filtered = await Table.select("Test_Id")
+    .where("Test_Id", "=", 1)
+    .exec();
+  console.log("Filtered Select result:");
+  console.log(JSON.stringify(filtered));
+
   // Update
   result = await Table.update({
     field: "Description",
