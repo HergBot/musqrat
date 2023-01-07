@@ -5,7 +5,10 @@ import mysql from "mysql2/promise";
  * Pool type.
  */
 export interface IDbConnection {
-  execute: (query: string, values: any) => Promise<[any[], any[]]>;
+  execute: (
+    query: string,
+    values: any
+  ) => Promise<[any[], any[]] | [any, any[]]>;
 }
 
 class DbConnection implements IDbConnection {
@@ -30,7 +33,10 @@ class DbConnection implements IDbConnection {
     }
   }
 
-  public execute(query: string, values: any): Promise<[any[], any[]]> {
+  public execute(
+    query: string,
+    values: any
+  ): Promise<[any[], any[]] | [any, any[]]> {
     if (this._pool === null) {
       throw new Error("Database not connected");
     }
