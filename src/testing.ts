@@ -144,7 +144,7 @@ export const mockUpdate = <
 >(
   table: Table<SchemaType, PrimaryKey>,
   updates: OptionalMulti<SetClause<SchemaType, PrimaryKey>>,
-  values: OptionalEmptyMulti<SchemaType>,
+  values: OptionalEmptyMulti<Partial<SchemaType>>,
   error?: string
 ): jest.SpyInstance<UpdateStatement<SchemaType>> => {
   return jest
